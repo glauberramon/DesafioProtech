@@ -52,9 +52,14 @@ namespace DesafioProtech.API.Controllers
             try
             {
                 if (pagina < 1 || tamanhoPagina > 50)
+                {
+                    _logger.LogWarning("Parâmetros de paginação inválidos: Página {Pagina}, Tamanho {Tamanho}", pagina, tamanhoPagina);
                     return BadRequest("Paginação inválida");
+                }
+
 
                 var animes = await _repository.ListarAsync(nome, diretor, resumo, pagina, tamanhoPagina);
+                _logger.LogInformation("Listando animes. Total: {Total}", animes.Count());
                 return Ok(animes);
             }
             catch (Exception ex)
@@ -87,6 +92,7 @@ namespace DesafioProtech.API.Controllers
                 if (anime == null)
                     throw new NotFoundException($"Anime ID {id} não encontrado");
 
+                _logger.LogInformation("Anime encontrado: {Nome}", anime.Nome);
                 return Ok(anime);
             }
             catch (NotFoundException ex)
@@ -128,7 +134,12 @@ namespace DesafioProtech.API.Controllers
             try
             {
                 if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Cadastro falhou - DTO inválido: {@Erros}", ModelState.Values.SelectMany(v => v.Errors));
                     return BadRequest(ModelState);
+                }
+
+                _logger.LogInformation("Iniciando cadastro de anime: {Nome}", animeDto.Nome);
 
                 var anime = new Anime
                 {
@@ -139,6 +150,7 @@ namespace DesafioProtech.API.Controllers
                 };
 
                 await _repository.AdicionarAsync(anime);
+                _logger.LogInformation("Anime cadastrado com sucesso. ID: {Id}", anime.Id);
                 return CreatedAtAction(nameof(ObterPorId), new { id = anime.Id }, anime);
             }
             catch (Exception ex)
@@ -178,7 +190,11 @@ namespace DesafioProtech.API.Controllers
             try
             {
                 if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Atualização falhou - DTO inválido: {@Erros}", ModelState.Values.SelectMany(v => v.Errors));
                     return BadRequest(ModelState);
+                }
+
 
                 var animeDb = await _repository.ObterPorIdAsync(id);
                 if (animeDb == null)
@@ -194,6 +210,7 @@ namespace DesafioProtech.API.Controllers
                     animeDb.Resumo = dto.Resumo;
 
                 await _repository.AtualizarAsync(animeDb);
+                _logger.LogInformation("Anime ID {id} atualizado com sucesso", id);
                 return NoContent();
             }
             catch (NotFoundException ex)
@@ -229,6 +246,7 @@ namespace DesafioProtech.API.Controllers
             try
             {
                 await _repository.RemoverLogicamenteAsync(id);
+                _logger.LogInformation("Anime ID {id} desativado com sucesso", id);
                 return NoContent();
             }
             catch (NotFoundException ex)
@@ -239,7 +257,7 @@ namespace DesafioProtech.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao desativar anime ID {id}", id);
-                return StatusCode(500, new { Mensagem = "Erro interno" });
+                return StatusCode(500, "Erro interno");
             }
         }
     }
